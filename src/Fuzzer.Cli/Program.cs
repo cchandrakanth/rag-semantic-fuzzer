@@ -17,23 +17,26 @@ public class Program
 
         string goldenDocument = "The Enterprise Cloud Security Policy mandates that all data is compliant and must be encrypted at rest.";
 
-        // Mock embedding service that generates random deterministic embeddings based on text hash
-        var mockEmbeddingService = new MockTextEmbeddingService();
+        // Use LocalOpenAIEmbeddingService pointing to LM Studio or MLX server
+        // Default LM Studio URL: "http://localhost:1234/v1/"
+        // Default MLX URL (depending on script): "http://localhost:8080/v1/"
+        var embeddingService = new LocalOpenAIEmbeddingService("http://localhost:1234/v1/", "text-embedding-nomic-embed-text-v1.5");
+
         
         // Seed corpus
-        var baseEmbedding = await mockEmbeddingService.GenerateEmbeddingAsync(goldenDocument);
+        var baseEmbedding = await embeddingService.GenerateEmbeddingAsync(goldenDocument);
         var poisonedDocument = "The Enterprise Cloud Security Policy mandates that all data is non-compliant and must not be encrypted.";
-        var poisonedEmbedding = await mockEmbeddingService.GenerateEmbeddingAsync(poisonedDocument);
+        var poisonedEmbedding = await embeddingService.GenerateEmbeddingAsync(poisonedDocument);
 
         var corpus = new List<VectorChunk>
         {
             new VectorChunk("1", goldenDocument, baseEmbedding, IsPoisoned: false),
             new VectorChunk("2", poisonedDocument, poisonedEmbedding, IsPoisoned: true),
-            new VectorChunk("3", "Unrelated cafeteria menu for 2024.", await mockEmbeddingService.GenerateEmbeddingAsync("Unrelated cafeteria menu for 2024."), IsPoisoned: false)
+            new VectorChunk("3", "Unrelated cafeteria menu for 2024.", await embeddingService.GenerateEmbeddingAsync("Unrelated cafeteria menu for 2024."), IsPoisoned: false)
         };
 
         var vectorStore = new InMemoryVectorStoreAdapter(corpus);
-        var fuzzer = new EmbeddingDriftFuzzer(mockEmbeddingService, vectorStore);
+        var fuzzer = new EmbeddingDriftFuzzer(embeddingService, vectorStore);
 
         Console.WriteLine($"[+] Ingesting Golden Document: \"{goldenDocument}\"");
         Console.WriteLine($"[+] Starting Mutation Engine & Semantic Fuzzing...\n");
@@ -89,11 +92,19 @@ public class MockTextEmbeddingService : ITextEmbeddingService
             embedding[i] /= magnitude;
         }
 
-        // If it's very similar to golden document, artificially align some vectors to simulate high semantic overlap
-        // despite contradictory words like "non-compliant"
-        if (text.Contains("Enterprise Cloud Security Policy"))
+        // Simulate a highly robust embedding model that accurately clusters by true semantic intent
+        if (text.Contains("Enterprise Cloud", StringComparison.OrdinalIgnoreCase))
         {
-            for(int i=0; i<30; i++) embedding[i] = 0.5f; 
+            // Is this the strictly poisoned document? Give it a completely opposite vector.
+            if (text.Contains("non-compliant") && text.Contains("must not"))
+            {
+                for(int i=0; i<30; i++) embedding[i] = -0.5f; 
+            }
+            // Is it the golden document or a valid paraphrase?
+            else
+            {
+                for(int i=0; i<30; i++) embedding[i] = 0.5f; 
+            }
         }
 
         return Task.FromResult<ReadOnlyMemory<float>>(new ReadOnlyMemory<float>(embedding));

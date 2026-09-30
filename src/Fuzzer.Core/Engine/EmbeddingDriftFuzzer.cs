@@ -22,7 +22,6 @@ public class EmbeddingDriftFuzzer
     public async Task<FuzzingReport> RunSemanticFuzzAsync(string goldenDocument, float perturbationThreshold = 0.8f, CancellationToken cancellationToken = default)
     {
         var baseEmbedding = await _embeddingService.GenerateEmbeddingAsync(goldenDocument, cancellationToken);
-        var baseSpan = baseEmbedding.Span;
 
         var mutants = _mutationEngine.GenerateMutations(goldenDocument).ToList();
         var results = new List<DriftResult>();
@@ -30,9 +29,8 @@ public class EmbeddingDriftFuzzer
         foreach (var mutant in mutants)
         {
             var mutantEmbedding = await _embeddingService.GenerateEmbeddingAsync(mutant, cancellationToken);
-            var mutantSpan = mutantEmbedding.Span;
 
-            var cosineSimilarity = TensorPrimitives.CosineSimilarity(baseSpan, mutantSpan);
+            var cosineSimilarity = TensorPrimitives.CosineSimilarity(baseEmbedding.Span, mutantEmbedding.Span);
             
             var retrievedChunks = await _vectorStoreAdapter.SearchAsync(mutantEmbedding, topK: 3, similarityThreshold: perturbationThreshold, cancellationToken);
             

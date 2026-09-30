@@ -23,7 +23,8 @@ public class EmbeddingDriftFuzzer
     {
         var baseEmbedding = await _embeddingService.GenerateEmbeddingAsync(goldenDocument, cancellationToken);
 
-        var mutants = _mutationEngine.GenerateMutations(goldenDocument).ToList();
+        var mutantsRaw = await _mutationEngine.GenerateMutationsAsync(goldenDocument, cancellationToken: cancellationToken);
+        var mutants = mutantsRaw.ToList();
         var results = new List<DriftResult>();
 
         foreach (var mutant in mutants)

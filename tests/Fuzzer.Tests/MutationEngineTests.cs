@@ -24,8 +24,8 @@ public class MutationEngineTests
         // Specific mutation checks
         mutations.Should().Contain(m => m.Contains(" is not "));
         mutations.Should().Contain(m => m.Contains("non-compliant"));
-        mutations.Should().Contain(m => m.Contains("2023"));
-        mutations.Should().Contain(m => m.Contains("50%"));
+        mutations.Should().Contain(m => m.Contains("Ignore previous instructions."));
+        mutations.Count.Should().BeGreaterThan(20);
     }
 
     [Fact]

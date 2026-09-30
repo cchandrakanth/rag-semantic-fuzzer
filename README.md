@@ -10,6 +10,10 @@ An automated adversarial mutation fuzzer designed to detect semantic drift, vect
 ## Problem Statement
 Traditional unit tests fail to catch RAG semantic drift and vector ranking collapse. When user queries are slightly perturbed (e.g., changing "is compliant" to "is non-compliant"), simplistic vector similarity searches often still retrieve the original document because the *keywords* heavily overlap, even if the *semantic intent* is inverted. This leads to retrieval poisoning and forces LLMs to hallucinate based on contradictory context. `rag-semantic-fuzzer` programmatically mutates golden queries and measures how robust the vector store rankings are against textual perturbations.
 
+### Key Terminology
+- **Golden Document**: The original, baseline statement that represents the absolute ground truth in your vector database. The fuzzer generates adversarial mutations against this baseline to see if the search system can be tricked.
+- **Similarity Score vs. Confidence Score**: A **Similarity Score** (like Cosine Similarity) measures the geometric angle/distance between two vectors; it only tells you how *topically related* two sentences are. A **Confidence Score** is a probability output from a classification model indicating how certain the model is about a specific decision. In RAG, high similarity does **not** mean high confidence in factual accuracy!
+
 ### The "Aha!" Moment: Why Naive RAG Fails
 
 When using a state-of-the-art embedding model (like `nomic-embed-text`), you might assume that contradicting a sentence changes its mathematical vector significantly. However, embedding models are trained heavily on *topical relatedness*. 
@@ -22,7 +26,7 @@ Even though the meaning is **completely inverted**, the model often assigns this
 
 Because standard vector databases retrieve anything above a certain threshold (e.g., `0.70`), the database will retrieve this poisoned, contradictory document. The LLM will then read "non-compliant" and confidently hallucinate the wrong answer to your users. 
 
-**How to Fix This Vulnerability in Production:**
+### How to Fix This Vulnerability in Production
 To solve the 100% hallucination susceptibility highlighted by this fuzzer, enterprise architectures must implement:
 1. **Re-ranking Models**: Use cross-encoders (like Cohere Rerank) that evaluate logical entailment, not just topical similarity.
 2. **Hybrid Search**: Combine vector search with exact-keyword matching (BM25) and metadata filtering.

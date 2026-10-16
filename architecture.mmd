@@ -1,0 +1,7 @@
+flowchart TD
+    A["Golden Source Document"] --> B["LLM Mutation Engine<br>(Gemma-4-26b via LM Studio)"]
+    B --> C["Embedding Service<br>(Nomic / BGE / OpenAI)"]
+    C --> D["Tensor Cosine Drift Calculator<br>(System.Numerics.Tensors)"]
+    D --> E["Vector Database Search<br>(Simulated Index)"]
+    E --> F["Rank Collapse & Poison Pill Verifier"]
+    F --> G["Fuzzing Telemetry & CI Gate Report<br>(Robustness Delta Score)"]
